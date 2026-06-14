@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<!-- saved from url=(0038)file:///C:/Users/aksha/attendance.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Attendance App</title>
+
+<style>
+body {
+    font-family: Arial;
+    text-align: center;
+    background: #e6f2ff;
+}
+
+.container {
+    background: white;
+    padding: 20px;
+    margin: 20px auto;
+    width: 330px;
+    border-radius: 15px;
+    box-shadow: 0 0 10px gray;
+}
+
+input, select, button {
+    width: 90%;
+    padding: 10px;
+    margin: 8px;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover { background: #0056b3; }
+
+table {
+    width: 95%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background: white;
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+}
+
+th {
+    background: #007bff;
+    color: white;
+}
+
+.delete-btn {
+    background: red;
+    color: white;
+    padding: 5px;
+    border: none;
+}
+
+.hidden { display: none; }
+</style>
+</head>
+
+<body>
+
+<h1>📱 Smart Attendance App</h1>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="container">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+
+    <select id="role">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+    </select>
+
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- APP PAGE -->
+<div id="appPage" class="hidden">
+
+    <div class="container">
+        <h3>Welcome <span id="userRole"></span></h3>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <form id="attendanceForm">
+            <input type="text" id="name" placeholder="Enter Name" required="">
+            <input type="text" id="regno" placeholder="Register Number" required="">
+
+            <select id="subject">
+                <option>DBMS</option>
+                <option>AI</option>
+                <option>Web Tech</option>
+            </select>
+
+            <button type="submit">Submit Attendance</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <h3>Total Records: <span id="count">0</span></h3>
+        <button onclick="clearAll()">🗑 Clear All</button>
+        <button onclick="downloadCSV()">⬇ Download Excel</button>
+    </div>
+
+    <table id="table">
+        <tbody><tr>
+            <th>Name</th>
+            <th>Reg No</th>
+            <th>Subject</th>
+            <th>Time</th>
+            <th>Action</th>
+        </tr>
+    </tbody></table>
+
+</div>
+
+<script>
+
+// LOGIN SYSTEM
+function login() {
+    let user = document.getElementById("username").value;
+    let pass = document.getElementById("password").value;
+    let role = document.getElementById("role").value;
+
+    // Simple demo credentials
+    if ((user === "student" && pass === "1234") || 
+        (user === "teacher" && pass === "admin")) {
+
+        localStorage.setItem("loggedIn", "true");
+        localStorage.setItem("role", role);
+
+        document.getElementById("loginPage").classList.add("hidden");
+        document.getElementById("appPage").classList.remove("hidden");
+
+        document.getElementById("userRole").innerText = role.toUpperCase();
+
+        loadData();
+
+    } else {
+        alert("❌ Invalid login");
+    }
+}
+
+function logout() {
+    localStorage.removeItem("loggedIn");
+    location.reload();
+}
+
+// AUTO LOGIN CHECK
+window.onload = function() {
+    if(localStorage.getItem("loggedIn") === "true") {
+        document.getElementById("loginPage").classList.add("hidden");
+        document.getElementById("appPage").classList.remove("hidden");
+
+        document.getElementById("userRole").innerText = localStorage.getItem("role").toUpperCase();
+        loadData();
+    }
+};
+
+// ATTENDANCE SYSTEM
+const form = document.getElementById("attendanceForm");
+const table = document.getElementById("table");
+const count = document.getElementById("count");
+
+form.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    let name = document.getElementById("name").value;
+    let regno = document.getElementById("regno").value;
+    let subject = document.getElementById("subject").value;
+    let time = new Date().toLocaleString();
+
+    let data = JSON.parse(localStorage.getItem("attendance")) || [];
+    data.push({name, regno, subject, time});
+    localStorage.setItem("attendance", JSON.stringify(data));
+
+    form.reset();
+    loadData();
+
+    alert("✅ Attendance Marked!");
+});
+
+function loadData() {
+    let data = JSON.parse(localStorage.getItem("attendance")) || [];
+
+    table.innerHTML = `
+    <tr>
+        <th>Name</th>
+        <th>Reg No</th>
+        <th>Subject</th>
+        <th>Time</th>
+        <th>Action</th>
+    </tr>`;
+
+    data.forEach((d, index) => {
+        let row = table.insertRow();
+        row.insertCell(0).innerHTML = d.name;
+        row.insertCell(1).innerHTML = d.regno;
+        row.insertCell(2).innerHTML = d.subject;
+        row.insertCell(3).innerHTML = d.time;
+        row.insertCell(4).innerHTML = `<button class="delete-btn" onclick="deleteRow(${index})">Delete</button>`;
+    });
+
+    count.innerText = data.length;
+}
+
+function deleteRow(index) {
+    let data = JSON.parse(localStorage.getItem("attendance")) || [];
+    data.splice(index, 1);
+    localStorage.setItem("attendance", JSON.stringify(data));
+    loadData();
+}
+
+function clearAll() {
+    if(confirm("Delete all records?")) {
+        localStorage.removeItem("attendance");
+        loadData();
+    }
+}
+
+function downloadCSV() {
+    let data = JSON.parse(localStorage.getItem("attendance")) || [];
+    let csv = "Name,Register No,Subject,Time\n";
+
+    data.forEach(d => {
+        csv += `${d.name},${d.regno},${d.subject},${d.time}\n`;
+    });
+
+    let blob = new Blob([csv], { type: "text/csv" });
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "attendance.csv";
+    a.click();
+}
+
+</script>
+
+
+</body></html>
